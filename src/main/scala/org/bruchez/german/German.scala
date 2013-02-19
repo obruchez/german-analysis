@@ -20,7 +20,7 @@ object German {
 
     println("Answers: "+answers.size)
 
-    Answer.keys.foreach(kv => println(" * "+kv._1+" ("+kv._2.map(_.toString).reduceLeft(_+", "+_)+")"))
+    //Answer.keys.foreach(kv => println(" * "+kv._1+" ("+kv._2.map(_.toString).reduceLeft(_+", "+_)+")"))
 
     val counts = collection.mutable.Map[String, Int]()
 
@@ -41,7 +41,8 @@ object German {
 
 case class Answer(
     number: Int,
-    keyValues: Map[String, Set[String]] = Map(),
+    keyValues: Map[String, Seq[String]] = Map(),
+    germanIs: Map[String, Int] = Map(),
     oralComprehension: Option[Int] = None,
     writtenComprehension: Option[Int] = None,
     oralExpression: Option[Int] = None,
@@ -56,6 +57,7 @@ case class Answer(
     println("Expression écrite: "+writtenExpression.getOrElse("-"))
     println("Grammaire: "+grammar.getOrElse("-"))
     println("Livres: "+books.getOrElse("-"))
+    println("L'allemand, c'est: "+Some(germanIs).filter(_.nonEmpty).map(_.map(kv => kv._1+" ("+kv._2+")").reduceLeft(_+", "+_)).getOrElse("-"))
     println("Valeurs:")
     for ((key, values) <- keyValues) {
       println(" - "+key+": "+Some(values).filterNot(_.isEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("-"))
@@ -66,7 +68,7 @@ case class Answer(
 object Answer {
   val lineCount = 123
 
-  val keys = collection.mutable.Map[String, collection.mutable.Set[Int]]()
+  //val keys = collection.mutable.Map[String, collection.mutable.Set[Int]]()
 
   def apply(lines: Seq[Seq[String]]): Answer = {
     @scala.annotation.tailrec
@@ -75,7 +77,7 @@ object Answer {
 
       def score: Option[Int] = (2 to 7).find(column => remainingLines(0)(column).nonEmpty).map(_ - 1)
 
-      def checkValues() {
+      /*def checkValues() {
         val notOnes =
           (for {
             (cell, index) <- remainingLines(1).zipWithIndex
@@ -84,7 +86,7 @@ object Answer {
         if (notOnes) {
           keys.getOrElseUpdate(key, collection.mutable.Set[Int]()).add(answer.number)
         }
-      }
+      }*/
 
       val (newAnswer, linesToDrop) =
         if (key == "Compétences") {
@@ -101,17 +103,27 @@ object Answer {
           (answer.copy(grammar = score), 1)
         } else if (key == "Lire des livres") {
           (answer.copy(books = score), 2)
-        } else {
-          val values = (remainingLines(0).drop(2).zipWithIndex filter { case (value, index) =>
-            value.trim.nonEmpty && remainingLines(1)(2 + index).nonEmpty
-          }).map(_._1).toSet
+        } else if (key == "Allemand c'est") {
+          val germanIs = remainingLines(0).drop(2).zipWithIndex map { case (value, index) =>
+            (value, remainingLines(1)(2 + index))
+          } filter { case (value, count) =>
+            value.nonEmpty && count.nonEmpty
+          } map { case (value, count) =>
+            (value, count.toInt)
+          }
 
-          checkValues() // @todo DEBUG
+          (answer.copy(germanIs = Map(germanIs: _*)), 3)
+        } else {
+          val values = remainingLines(0).drop(2).zipWithIndex map { case (value, index) =>
+            (value, remainingLines(1)(2 + index))
+          } filter { case (value, count) =>
+            value.nonEmpty && count.nonEmpty
+          } flatMap { case (value, count) =>
+            List.fill(count.toInt)(value)
+          }
 
           (answer.copy(keyValues = answer.keyValues + (key -> values)), 3)
         }
-
-      // @todo valeurs > 1 (3 noms...)
 
       if (remainingLines.size <= linesToDrop)
         newAnswer
