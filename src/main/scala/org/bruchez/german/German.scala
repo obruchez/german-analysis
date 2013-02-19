@@ -18,24 +18,26 @@ object German {
 
     //for (answer <- answers) { answer.dump(); println("===") }
 
-    println("Answers: "+answers.size)
+    println("Réponses: "+answers.size)
+    println()
 
     //Answer.keys.foreach(kv => println(" * "+kv._1+" ("+kv._2.map(_.toString).reduceLeft(_+", "+_)+")"))
 
-    val counts = collection.mutable.Map[String, Int]()
+    val totals = Answer.totals(answers)
 
-    val sizes =
-      for (answer <- answers) yield {
-        answer.keyValues("Aimez pas en allemand") foreach { s =>
-          val currentCount = counts.getOrElse(s, 0)
-          counts.put(s, currentCount + 1)
-        }
-      }
+    // @todo display values in same order as in answers
 
-    counts.foreach(kv => println(kv._1+" -> "+kv._2))
+    println("Totaux:")
+    for ((value, subTotals) <- totals.toSeq.sortBy(_._1)) {
+      val total = subTotals.map(_._2).fold(0)(_ + _)
+      val sortedSubTotals = subTotals.toSeq.sortBy(_._2).reverse
+      val sortedSubTotalsAsString = Some(sortedSubTotals map { kv =>
+        kv._1+" (%d, %.2f%%)".format(kv._2, 100.0 * kv._2.toDouble / total)
+      }).filter(_.nonEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("_")
 
-    //println("Sizes: "+sizes)
-    //println("Sum: "+sizes.sum)
+      println(" - "+value+": "+sortedSubTotalsAsString)
+    }
+    println()
   }
 }
 
@@ -146,4 +148,22 @@ object Answer {
 
   def cellsEmpty(line: Seq[String]): Boolean = line.map(_.isEmpty).fold(true)(_ && _)
   def isHeaderLine(line: Seq[String]): Boolean = line(0).map(_.isDigit).fold(true)(_ && _) && cellsEmpty(line.tail)
+
+  def totals(answers: Seq[Answer]): Map[String, Map[String, Int]] = {
+    val mutableTotals = collection.mutable.Map[String, collection.mutable.Map[String, Int]]()
+
+    for (answer <- answers) {
+      for ((key, values) <- answer.keyValues; value <- values) {
+        val keyMap = mutableTotals.getOrElse(key, collection.mutable.Map[String, Int]())
+        mutableTotals.put(key, keyMap)
+
+        val valueCount = keyMap.getOrElse(value, 0)
+        keyMap.put(value, valueCount + 1)
+      }
+    }
+
+    // @todo germanIs + scores
+
+    mutableTotals.toMap.map(kv => kv._1 -> kv._2.toMap)
+  }
 }
