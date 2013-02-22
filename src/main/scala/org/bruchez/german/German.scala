@@ -30,12 +30,13 @@ object German {
     println("Totaux:")
     for ((value, subTotals) <- totals.toSeq.sortBy(_._1)) {
       val total = subTotals.map(_._2).fold(0)(_ + _)
+      val subValueCount = subTotals.map(_._2).sum
       val sortedSubTotals = subTotals.toSeq.sortBy(_._2).reverse
       val sortedSubTotalsAsString = Some(sortedSubTotals map { kv =>
         kv._1+" (%d, %.2f%%)".format(kv._2, 100.0 * kv._2.toDouble / total)
       }).filter(_.nonEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("_")
 
-      println(" - "+value+": "+sortedSubTotalsAsString)
+      println(" - "+value+" ("+subValueCount+"): "+sortedSubTotalsAsString)
     }
     println()
   }
@@ -93,19 +94,19 @@ object Answer {
       val (newAnswer, linesToDrop) =
         if (key == "Compétences") {
           (answer, 1)
-        } else if (key == "Comprendre discours") {
+        } else if (key == oralComprehensionKey) {
           (answer.copy(oralComprehension = score), 1)
-        } else if (key == "Comprendre un texte") {
+        } else if (key == writtenComprehensionKey) {
           (answer.copy(writtenComprehension = score), 1)
-        } else if (key == "Parler") {
+        } else if (key == oralExpressionKey) {
           (answer.copy(oralExpression = score), 1)
-        } else if (key == "Ecrire") {
+        } else if (key == writtenExpressionKey) {
           (answer.copy(writtenExpression = score), 1)
-        } else if (key == "Faire de la grammaire") {
+        } else if (key == grammarKey) {
           (answer.copy(grammar = score), 1)
-        } else if (key == "Lire des livres") {
+        } else if (key == booksKey) {
           (answer.copy(books = score), 2)
-        } else if (key == "Allemand c'est") {
+        } else if (key == germanIsKey) {
           val germanIs = remainingLines(0).drop(2).zipWithIndex map { case (value, index) =>
             (value, remainingLines(1)(2 + index))
           } filter { case (value, count) =>
@@ -153,17 +154,35 @@ object Answer {
     val mutableTotals = collection.mutable.Map[String, collection.mutable.Map[String, Int]]()
 
     for (answer <- answers) {
-      for ((key, values) <- answer.keyValues; value <- values) {
+      def addKeyAndValue(key: String, value: String, count: Int = 1) {
         val keyMap = mutableTotals.getOrElse(key, collection.mutable.Map[String, Int]())
         mutableTotals.put(key, keyMap)
 
         val valueCount = keyMap.getOrElse(value, 0)
-        keyMap.put(value, valueCount + 1)
+        keyMap.put(value, valueCount + count)
       }
-    }
 
-    // @todo germanIs + scores
+      for ((key, values) <- answer.keyValues; value <- values) addKeyAndValue(key, value)
+
+      for ((value, count) <- answer.germanIs) addKeyAndValue(germanIsKey, value, count)
+
+      addKeyAndValue(oralComprehensionKey, answer.oralComprehension.map(_.toString).getOrElse(noAnswerValue))
+      addKeyAndValue(writtenComprehensionKey, answer.writtenComprehension.map(_.toString).getOrElse(noAnswerValue))
+      addKeyAndValue(oralExpressionKey, answer.oralExpression.map(_.toString).getOrElse(noAnswerValue))
+      addKeyAndValue(writtenExpressionKey, answer.writtenExpression.map(_.toString).getOrElse(noAnswerValue))
+      addKeyAndValue(grammarKey, answer.grammar.map(_.toString).getOrElse(noAnswerValue))
+      addKeyAndValue(booksKey, answer.books.map(_.toString).getOrElse(noAnswerValue))
+    }
 
     mutableTotals.toMap.map(kv => kv._1 -> kv._2.toMap)
   }
+
+  private val oralComprehensionKey = "Comprendre discours"
+  private val writtenComprehensionKey = "Comprendre un texte"
+  private val oralExpressionKey = "Parler"
+  private val writtenExpressionKey = "Ecrire"
+  private val grammarKey = "Faire de la grammaire"
+  private val booksKey = "Lire des livres"
+  private val germanIsKey = "Allemand c'est"
+  private val noAnswerValue = "Pas de réponse"
 }
