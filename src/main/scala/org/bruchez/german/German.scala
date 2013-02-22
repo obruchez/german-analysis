@@ -14,6 +14,10 @@ object German {
       for (cell <- line) yield cell.trim
     }
 
+    val keys = Key.keys(lines)
+
+    keys.foreach(k => println(k.number+" -> "+k.name))
+
     val answers = Answer.answersFromLines(trimmedLines)
 
     //for (answer <- answers) { answer.dump(); println("===") }
@@ -25,21 +29,29 @@ object German {
 
     val totals = Answer.totals(answers)
 
-    // @todo display values in same order as in answers
-
     println("Totaux:")
-    for ((value, subTotals) <- totals.toSeq.sortBy(_._1)) {
+    for {
+      key <- keys
+      subTotals <- totals.get(key.name)
+    } {
       val total = subTotals.map(_._2).fold(0)(_ + _)
-      val subValueCount = subTotals.map(_._2).sum
+      val valueCount = subTotals.map(_._2).sum
       val sortedSubTotals = subTotals.toSeq.sortBy(_._2).reverse
       val sortedSubTotalsAsString = Some(sortedSubTotals map { kv =>
         kv._1+" (%d, %.2f%%)".format(kv._2, 100.0 * kv._2.toDouble / total)
       }).filter(_.nonEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("_")
 
-      println(" - "+value+" ("+subValueCount+"): "+sortedSubTotalsAsString)
+      println(" - "+key.number+" "+key.name+" ("+valueCount+"): "+sortedSubTotalsAsString)
     }
     println()
   }
+}
+
+case class Key(number: String, name: String)
+
+object Key {
+  def keys(lines: List[List[String]]): Seq[Key] =
+    for (line <- lines.take(Answer.lineCount).filter(_(1).nonEmpty)) yield Key(" "*(4-line(0).length)+line(0), line(1))
 }
 
 case class Answer(
