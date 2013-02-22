@@ -9,14 +9,16 @@ object German {
     }
 
     val lines = CSV.parse(scala.io.Source.fromFile(args(0)).mkString+"\n")
+    val fixedValues = Map("oui" -> "Oui", "non" -> "Non")
+    val trimmedLines =
+      for (line <- lines) yield {
+        for (cell <- line) yield {
+          val trimmed = cell.trim
+          fixedValues.get(trimmed).getOrElse(trimmed)
+        }
+      }
 
-    val trimmedLines = for (line <- lines) yield {
-      for (cell <- line) yield cell.trim
-    }
-
-    val keys = Key.keys(lines)
-
-    keys.foreach(k => println(k.number+" -> "+k.name))
+    implicit val keys = Key.keys(lines)
 
     val answers = Answer.answersFromLines(trimmedLines)
 
@@ -27,22 +29,40 @@ object German {
 
     //Answer.keys.foreach(kv => println(" * "+kv._1+" ("+kv._2.map(_.toString).reduceLeft(_+", "+_)+")"))
 
-    val totals = Answer.totals(answers)
-
     println("Totaux:")
-    for {
-      key <- keys
-      subTotals <- totals.get(key.name)
-    } {
-      val total = subTotals.map(_._2).fold(0)(_ + _)
-      val valueCount = subTotals.map(_._2).sum
-      val sortedSubTotals = subTotals.toSeq.sortBy(_._2).reverse
-      val sortedSubTotalsAsString = Some(sortedSubTotals map { kv =>
-        kv._1+" (%d, %.2f%%)".format(kv._2, 100.0 * kv._2.toDouble / total)
-      }).filter(_.nonEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("_")
+    Answer.dumpTotals(Answer.totals(answers))
+    println()
+    println()
 
-      println(" - "+key.number+" "+key.name+" ("+valueCount+"): "+sortedSubTotalsAsString)
+    val germanUsefulYes = Answer.filteredAnswers(answers, "Utile d'apprendre l'allemand", "Oui")
+    val germanUsefulNo = Answer.filteredAnswers(answers, "Utile d'apprendre l'allemand", "Non")
+    def dumpGermanUseful(answers: Seq[Answer]) {
+      Answer.dumpTotals(Answer.totals(
+        Answer.filteredAnswers(answers, Set("Pourquoi")),
+        withGermanIs = false,
+        withCompetencies = false))
     }
+    println("Allemand utile = oui:")
+    dumpGermanUseful(germanUsefulYes)
+    println("Allemand utile = non:")
+    dumpGermanUseful(germanUsefulNo)
+    println()
+    println()
+
+    val likeGermanYes = Answer.filteredAnswers(answers, "Aimez-vous l'allemand", "Oui")
+    val likeGermanNo = Answer.filteredAnswers(answers, "Aimez-vous l'allemand", "Non")
+    def dumpLikeGerman(answers: Seq[Answer]) {
+      Answer.dumpTotals(Answer.totals(
+        Answer.filteredAnswers(
+          answers,
+          Set("Participation en classe", "Faire travaux demandés", "Combien de temps pour apprentissage")),
+        withGermanIs = false))
+    }
+    println("Aime l'allemand = oui:")
+    dumpLikeGerman(likeGermanYes)
+    println("Aime l'allemand = non:")
+    dumpLikeGerman(likeGermanNo)
+    println()
     println()
   }
 }
@@ -104,7 +124,7 @@ object Answer {
       }*/
 
       val (newAnswer, linesToDrop) =
-        if (key == "Compétences") {
+        if (key == competenciesKey) {
           (answer, 1)
         } else if (key == oralComprehensionKey) {
           (answer.copy(oralComprehension = score), 1)
@@ -162,7 +182,20 @@ object Answer {
   def cellsEmpty(line: Seq[String]): Boolean = line.map(_.isEmpty).fold(true)(_ && _)
   def isHeaderLine(line: Seq[String]): Boolean = line(0).map(_.isDigit).fold(true)(_ && _) && cellsEmpty(line.tail)
 
-  def totals(answers: Seq[Answer]): Map[String, Map[String, Int]] = {
+  def resultsAsString(results: Map[String, Int]): String = {
+    val total = results.map(_._2).fold(0)(_ + _)
+    val sortedSubTotals = results.toSeq.sortBy(_._2).reverse
+
+    Some(sortedSubTotals map { kv =>
+      kv._1+" (%d, %.2f%%)".format(kv._2, 100.0 * kv._2.toDouble / total)
+    }).filter(_.nonEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("_")
+  }
+
+  def totals(
+      answers: Seq[Answer],
+      withKeyValues: Boolean = true,
+      withGermanIs: Boolean = true,
+      withCompetencies: Boolean = true): Map[String, Map[String, Int]] = {
     val mutableTotals = collection.mutable.Map[String, collection.mutable.Map[String, Int]]()
 
     for (answer <- answers) {
@@ -174,21 +207,46 @@ object Answer {
         keyMap.put(value, valueCount + count)
       }
 
-      for ((key, values) <- answer.keyValues; value <- values) addKeyAndValue(key, value)
+      if (withKeyValues) {
+        for ((key, values) <- answer.keyValues; value <- values) addKeyAndValue(key, value)
+      }
 
-      for ((value, count) <- answer.germanIs) addKeyAndValue(germanIsKey, value, count)
+      if (withGermanIs) {
+        for ((value, count) <- answer.germanIs) addKeyAndValue(germanIsKey, value, count)
+      }
 
-      addKeyAndValue(oralComprehensionKey, answer.oralComprehension.map(_.toString).getOrElse(noAnswerValue))
-      addKeyAndValue(writtenComprehensionKey, answer.writtenComprehension.map(_.toString).getOrElse(noAnswerValue))
-      addKeyAndValue(oralExpressionKey, answer.oralExpression.map(_.toString).getOrElse(noAnswerValue))
-      addKeyAndValue(writtenExpressionKey, answer.writtenExpression.map(_.toString).getOrElse(noAnswerValue))
-      addKeyAndValue(grammarKey, answer.grammar.map(_.toString).getOrElse(noAnswerValue))
-      addKeyAndValue(booksKey, answer.books.map(_.toString).getOrElse(noAnswerValue))
+      if (withCompetencies) {
+        addKeyAndValue(oralComprehensionKey, answer.oralComprehension.map(_.toString).getOrElse(noAnswerValue))
+        addKeyAndValue(writtenComprehensionKey, answer.writtenComprehension.map(_.toString).getOrElse(noAnswerValue))
+        addKeyAndValue(oralExpressionKey, answer.oralExpression.map(_.toString).getOrElse(noAnswerValue))
+        addKeyAndValue(writtenExpressionKey, answer.writtenExpression.map(_.toString).getOrElse(noAnswerValue))
+        addKeyAndValue(grammarKey, answer.grammar.map(_.toString).getOrElse(noAnswerValue))
+        addKeyAndValue(booksKey, answer.books.map(_.toString).getOrElse(noAnswerValue))
+      }
     }
 
     mutableTotals.toMap.map(kv => kv._1 -> kv._2.toMap)
   }
 
+  def dumpTotals(totals: Map[String, Map[String, Int]])(implicit keys: Seq[Key]) {
+    for (key <- keys; subTotals <- totals.get(key.name)) {
+      val valueCount = subTotals.map(_._2).sum
+      val scoreAverage =
+        if (scoreKeys.contains(key.name))
+          " (moyenne: %.2f)".format(subTotals.map(kv => kv._1.toInt * kv._2).sum.toDouble / valueCount)
+        else
+          ""
+      println(" - "+key.number+" "+key.name+" ("+valueCount+"): "+Answer.resultsAsString(subTotals)+scoreAverage)
+    }
+  }
+
+  def filteredAnswers(answers: Seq[Answer], key: String, value: String): Seq[Answer] =
+    answers.filter(_.keyValues(key).toSet.contains(value))
+
+  def filteredAnswers(answers: Seq[Answer], keys: Set[String]): Seq[Answer] =
+    answers.map(answer => answer.copy(keyValues = answer.keyValues.filter(kv => keys.contains(kv._1))))
+
+  private val competenciesKey = "Compétences"
   private val oralComprehensionKey = "Comprendre discours"
   private val writtenComprehensionKey = "Comprendre un texte"
   private val oralExpressionKey = "Parler"
@@ -197,4 +255,7 @@ object Answer {
   private val booksKey = "Lire des livres"
   private val germanIsKey = "Allemand c'est"
   private val noAnswerValue = "Pas de réponse"
+
+  private val scoreKeys =
+    Set(oralComprehensionKey, writtenComprehensionKey, oralExpressionKey, writtenExpressionKey, grammarKey, booksKey)
 }
