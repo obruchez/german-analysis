@@ -9,18 +9,28 @@ object German {
     }
 
     args.foreach(dumpFileResults)
+    dumpAllFileResults(args)
   }
 
   def dumpFileResults(file: String) {
-    val stars = "*" * (file.length + 4)
+    dumpResults(file, CSV.parse(scala.io.Source.fromFile(file).mkString+"\n"))
+  }
+
+  def dumpAllFileResults(files: Seq[String]) {
+    val lines = files.map(file => CSV.parse(scala.io.Source.fromFile(file).mkString+"\n")).reduce(_ ++ _)
+    dumpResults("Toutes les classes", lines)
+  }
+
+  def dumpResults(header: String, lines: List[List[String]]) {
+    val stars = "*" * (header.length + 4)
     println(stars)
-    println("* %s *".format(file))
+    println("* %s *".format(header))
     println(stars)
     println()
 
     val fixedValues = Map("oui" -> "Oui", "non" -> "Non")
     val trimmedLines =
-      for (line <- CSV.parse(scala.io.Source.fromFile(file).mkString+"\n")) yield {
+      for (line <- lines) yield {
         for (cell <- line) yield {
           val trimmed = cell.trim
           fixedValues.get(trimmed).getOrElse(trimmed)
