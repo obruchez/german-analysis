@@ -27,7 +27,7 @@ object German {
         }
       }
 
-    implicit val keys = Key.keys(trimmedLines)
+    implicit val keys = Key.keys(trimmedLines) :+ Key("    ", "Combien de temps (classes)")
     //keys.foreach(key => println(key.number+" "+key.name))
 
     val answers = Answer.answersFromLines(trimmedLines)
@@ -89,7 +89,7 @@ object German {
         images <- answer.keyValues.get("3 images").toSeq
         image <- images
       } yield image).distinct.sorted
-    println("Hypothèse 3")
+    println("Hypothèse 8")
     println("-----------")
     println()
     for (image <- allImages) {
@@ -102,8 +102,42 @@ object German {
         withGermanIs = false,
         withCompetencies = false))
     }
+    println()
 
     // Hypothesis 9
+    def dumpHypothesis9(answers: Seq[Answer]) {
+      def withDuratuonClasses(answers: Seq[Answer]): Seq[Answer] =
+        for {
+          answer <- answers
+          durations = answer.keyValues("Combien de temps")
+          duration <- durations
+        } yield {
+          assert(durations.size == 1)
+          val less = Set("1 semaine", "2 semaines").contains(duration)
+          val more = Set("3 semaines", "1 mois", "2 mois", "3 mois", "4-6 mois", "plus de 6 mois").contains(duration)
+          val durationClass =
+            if (less) "Moins de 3 semaines"
+            else if (more) "Plus de 3 semaines"
+            else "Autre"
+          answer.copy(keyValues = answer.keyValues + ("Combien de temps (classes)" -> Seq(durationClass)))
+        }
+
+      Answer.dumpTotals(Answer.totals(
+        withDuratuonClasses(Answer.filteredAnswers(
+          answers,
+          Set("en dehors parle allemand/Ch-all", "Séjours", "Combien de temps"))),
+        withGermanIs = false,
+        withCompetencies = false))
+    }
+    println("Hypothèse 9")
+    println("------------")
+    println()
+    println("Aime l'allemand = oui:")
+    dumpHypothesis9(likeGermanYes)
+    println()
+    println("Aime l'allemand = non:")
+    dumpHypothesis9(likeGermanNo)
+    println()
 
     // Hypothesis 10
     def dumpHypothesis10(answers: Seq[Answer]) {
