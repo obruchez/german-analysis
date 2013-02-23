@@ -8,7 +8,7 @@ object German {
       return
     }
 
-    args.tail.foreach(dumpFileResults)
+    args.foreach(dumpFileResults)
   }
 
   def dumpFileResults(file: String) {
@@ -39,9 +39,10 @@ object German {
 
     //Answer.keys.foreach(kv => println(" * "+kv._1+" ("+kv._2.map(_.toString).reduceLeft(_+", "+_)+")"))
 
-    println("Totaux:")
-    Answer.dumpTotals(Answer.totals(answers))
+    println("Totaux")
+    println("------")
     println()
+    Answer.dumpTotals(Answer.totals(answers))
     println()
 
     val germanUsefulYes = Answer.filteredAnswers(answers, "Utile d'apprendre l'allemand", "Oui")
@@ -52,11 +53,14 @@ object German {
         withGermanIs = false,
         withCompetencies = false))
     }
+    println("Hypothèse 2")
+    println("-----------")
+    println()
     println("Allemand utile = oui:")
     dumpGermanUseful(germanUsefulYes)
+    println()
     println("Allemand utile = non:")
     dumpGermanUseful(germanUsefulNo)
-    println()
     println()
 
     val likeGermanYes = Answer.filteredAnswers(answers, "Aimez-vous l'allemand", "Oui")
@@ -68,11 +72,14 @@ object German {
           Set("Participation en classe", "Faire travaux demandés", "Combien de temps pour apprentissage")),
         withGermanIs = false))
     }
+    println("Hypothèse 3")
+    println("-----------")
+    println()
     println("Aime l'allemand = oui:")
     dumpLikeGerman(likeGermanYes)
+    println()
     println("Aime l'allemand = non:")
     dumpLikeGerman(likeGermanNo)
-    println()
     println()
   }
 }
@@ -81,7 +88,7 @@ case class Key(number: String, name: String)
 
 object Key {
   def keys(lines: List[List[String]]): Seq[Key] =
-    for (line <- lines.take(Answer.lineCount).filter(_(1).nonEmpty)) yield Key(" "*(4-line(0).length)+line(0), line(1))
+    for (line <- lines.take(123).filter(_(1).nonEmpty)) yield Key(" "*(4-line(0).length)+line(0), line(1))
 }
 
 case class Answer(
@@ -111,8 +118,6 @@ case class Answer(
 }
 
 object Answer {
-  val lineCount = 123
-
   //val keys = collection.mutable.Map[String, collection.mutable.Set[Int]]()
 
   def apply(lines: Seq[Seq[String]]): Answer = {
@@ -176,17 +181,22 @@ object Answer {
         answerFromLines(remainingLines.drop(linesToDrop), newAnswer)
     }
 
-    answerFromLines(lines.drop(1), Answer(number = lines(0)(0).toInt))
+    val numberAsString = if (lines(0)(0).toLowerCase.startsWith("sujet")) lines(0)(0).substring(6) else lines(0)(0)
+    answerFromLines(lines.drop(1), Answer(number = numberAsString.toInt))
   }
 
   @scala.annotation.tailrec
   def answersFromLines(remainingLines: Seq[Seq[String]], parsedAnswers: Seq[Answer] = Seq()): Seq[Answer] = {
-    if (remainingLines.size < Answer.lineCount || !isHeaderLine(remainingLines.head))
-      parsedAnswers
-    else
-      answersFromLines(
-        remainingLines.drop(Answer.lineCount),
-        parsedAnswers :+ Answer(remainingLines.take(Answer.lineCount)))
+    val nextAnswerOption = remainingLines.zipWithIndex.find(li => li._1(0) == "4.8").map(_._2 + 2)
+
+    nextAnswerOption match {
+      case None => parsedAnswers
+      case Some(nextAnswer) => {
+        answersFromLines(
+          remainingLines.drop(nextAnswer).dropWhile(_(0).isEmpty),
+          parsedAnswers :+ Answer(remainingLines.take(nextAnswer)))
+      }
+    }
   }
 
   def cellsEmpty(line: Seq[String]): Boolean = line.map(_.isEmpty).fold(true)(_ && _)
