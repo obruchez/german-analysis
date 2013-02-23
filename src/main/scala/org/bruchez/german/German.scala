@@ -2,13 +2,23 @@ package org.bruchez.german
 
 object German {
   def main(args: Array[String]) {
-    if (args.size != 1) {
-      println("File needed")
+    if (args.size < 1) {
+      println("File(s) needed")
       for { a <- args } { println(a) }
       return
     }
 
-    val lines = CSV.parse(scala.io.Source.fromFile(args(0)).mkString+"\n")
+    args.tail.foreach(dumpFileResults)
+  }
+
+  def dumpFileResults(file: String) {
+    val stars = "*" * (file.length + 4)
+    println(stars)
+    println("* %s *".format(file))
+    println(stars)
+    println()
+
+    val lines = CSV.parse(scala.io.Source.fromFile(file).mkString+"\n")
     val fixedValues = Map("oui" -> "Oui", "non" -> "Non")
     val trimmedLines =
       for (line <- lines) yield {
