@@ -36,15 +36,17 @@ object German {
     println("Réponses: "+answers.size)
     println()
 
+    // Totals
     println("Totaux")
     println("------")
     println()
     Answer.dumpTotals(Answer.totals(answers))
     println()
 
+    // Hypothesis 2
     val germanUsefulYes = Answer.filteredAnswers(answers, "Utile d'apprendre l'allemand", "Oui")
     val germanUsefulNo = Answer.filteredAnswers(answers, "Utile d'apprendre l'allemand", "Non")
-    def dumpGermanUseful(answers: Seq[Answer]) {
+    def dumpHypothesis2(answers: Seq[Answer]) {
       Answer.dumpTotals(Answer.totals(
         Answer.filteredAnswers(answers, Set("Pourquoi")),
         withGermanIs = false,
@@ -54,15 +56,16 @@ object German {
     println("-----------")
     println()
     println("Allemand utile = oui:")
-    dumpGermanUseful(germanUsefulYes)
+    dumpHypothesis2(germanUsefulYes)
     println()
     println("Allemand utile = non:")
-    dumpGermanUseful(germanUsefulNo)
+    dumpHypothesis2(germanUsefulNo)
     println()
 
+    // Hypothesis 3
     val likeGermanYes = Answer.filteredAnswers(answers, "Aimez-vous l'allemand", "Oui")
     val likeGermanNo = Answer.filteredAnswers(answers, "Aimez-vous l'allemand", "Non")
-    def dumpLikeGerman(answers: Seq[Answer]) {
+    def dumpHypothesis3(answers: Seq[Answer]) {
       Answer.dumpTotals(Answer.totals(
         Answer.filteredAnswers(
           answers,
@@ -73,10 +76,67 @@ object German {
     println("-----------")
     println()
     println("Aime l'allemand = oui:")
-    dumpLikeGerman(likeGermanYes)
+    dumpHypothesis3(likeGermanYes)
     println()
     println("Aime l'allemand = non:")
-    dumpLikeGerman(likeGermanNo)
+    dumpHypothesis3(likeGermanNo)
+    println()
+
+    // Hypothesis 8
+    val allImages =
+      (for {
+        answer <- answers
+        images <- answer.keyValues.get("3 images").toSeq
+        image <- images
+      } yield image).distinct.sorted
+    println("Hypothèse 3")
+    println("-----------")
+    println()
+    for (image <- allImages) {
+      val answersForImage = Answer.filteredAnswers(answers, "3 images", image)
+      println("Image = "+image+":")
+      Answer.dumpTotals(Answer.totals(
+        Answer.filteredAnswers(
+          answersForImage,
+          Set("Aimez-vous l'allemand")),
+        withGermanIs = false,
+        withCompetencies = false))
+    }
+
+    // Hypothesis 9
+
+    // Hypothesis 10
+    def dumpHypothesis10(answers: Seq[Answer]) {
+      Answer.dumpTotals(Answer.totals(
+        Answer.filteredAnswers(answers, Set("Télévision en allemand", "Chansons en allemand")),
+        withGermanIs = false,
+        withCompetencies = false))
+    }
+    println("Hypothèse 10")
+    println("------------")
+    println()
+    println("Aime l'allemand = oui:")
+    dumpHypothesis10(likeGermanYes)
+    println()
+    println("Aime l'allemand = non:")
+    dumpHypothesis10(likeGermanNo)
+    println()
+
+    // Hypothesis 11
+    def dumpHypothesis11(answers: Seq[Answer]) {
+      Answer.dumpTotals(Answer.totals(
+        Answer.filteredAnswers(answers, Set("Utilisation études/vie professionnelle")),
+        withGermanIs = false,
+        withCompetencies = false))
+    }
+    println("Hypothèse 11")
+    println("------------")
+    println()
+    println("Aime l'allemand = oui:")
+    dumpHypothesis11(likeGermanYes)
+    println()
+    println("Aime l'allemand = non:")
+    dumpHypothesis11(likeGermanNo)
     println()
   }
 }
