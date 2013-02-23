@@ -18,26 +18,23 @@ object German {
     println(stars)
     println()
 
-    val lines = CSV.parse(scala.io.Source.fromFile(file).mkString+"\n")
     val fixedValues = Map("oui" -> "Oui", "non" -> "Non")
     val trimmedLines =
-      for (line <- lines) yield {
+      for (line <- CSV.parse(scala.io.Source.fromFile(file).mkString+"\n")) yield {
         for (cell <- line) yield {
           val trimmed = cell.trim
           fixedValues.get(trimmed).getOrElse(trimmed)
         }
       }
 
-    implicit val keys = Key.keys(lines)
+    implicit val keys = Key.keys(trimmedLines)
+    //keys.foreach(key => println(key.number+" "+key.name))
 
     val answers = Answer.answersFromLines(trimmedLines)
-
-    //for (answer <- answers) { answer.dump(); println("===") }
+    //answers.foreach(answer => { answer.dump(); println("===") })
 
     println("Réponses: "+answers.size)
     println()
-
-    //Answer.keys.foreach(kv => println(" * "+kv._1+" ("+kv._2.map(_.toString).reduceLeft(_+", "+_)+")"))
 
     println("Totaux")
     println("------")
@@ -123,7 +120,8 @@ object Answer {
   def apply(lines: Seq[Seq[String]]): Answer = {
     @scala.annotation.tailrec
     def answerFromLines(remainingLines: Seq[Seq[String]], answer: Answer): Answer = {
-      val key = remainingLines(0)(1)
+      val key = if (remainingLines(0)(1).nonEmpty) remainingLines(0)(1) else remainingLines(1)(1)
+      assert(key.nonEmpty)
 
       def score: Option[Int] = (2 to 7).find(column => remainingLines(0)(column).nonEmpty).map(_ - 1)
 
@@ -250,12 +248,16 @@ object Answer {
 
   def dumpTotals(totals: Map[String, Map[String, Int]])(implicit keys: Seq[Key]) {
     for (key <- keys; subTotals <- totals.get(key.name)) {
-      val valueCount = subTotals.map(_._2).sum
+      val valueCount = subTotals.map(_._2).fold(0)(_ + _)
+
+      val numericSubTotals = subTotals.filterNot(_._1 == "Pas de réponse")
+      val numericValueCount = numericSubTotals.map(_._2).fold(0)(_ + _)
       val scoreAverage =
         if (scoreKeys.contains(key.name))
-          " (moyenne: %.2f)".format(subTotals.map(kv => kv._1.toInt * kv._2).sum.toDouble / valueCount)
+          " (moyenne: %.2f)".format(numericSubTotals.map(kv => kv._1.toInt * kv._2).sum.toDouble / numericValueCount)
         else
           ""
+
       println(" - "+key.number+" "+key.name+" ("+valueCount+"): "+Answer.resultsAsString(subTotals)+scoreAverage)
     }
   }
