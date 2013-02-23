@@ -72,7 +72,33 @@ object German {
     dumpHypothesis2(germanUsefulNo)
     println()
 
-    // Hypothesis 3
+    // Hypothesis 3 (part 1)
+    def dumpCompetency(f: (Answer, Int) => Boolean, competency: String) {
+      for (score <- 1 to 6) {
+        val filteredAnswers = answers.filter(answer => f(answer, score))
+        if (filteredAnswers.nonEmpty) {
+          println(competency+" = "+score+":")
+          Answer.dumpTotals(Answer.totals(
+            Answer.filteredAnswers(
+              filteredAnswers,
+              Set("Participation en classe", "Faire travaux demandés", "Combien de temps pour apprentissage")),
+            withGermanIs = false,
+            withCompetencies = false))
+          println()
+        }
+      }
+    }
+    println("Hypothèse 3")
+    println("-----------")
+    println()
+    dumpCompetency(_.oralComprehension == Some(_), "Comprendre discours")
+    dumpCompetency(_.writtenComprehension == Some(_), "Comprendre un texte")
+    dumpCompetency(_.oralExpression == Some(_), "Parler")
+    dumpCompetency(_.writtenExpression == Some(_), "Ecrire")
+    dumpCompetency(_.grammar == Some(_), "Faire de la grammaire")
+    dumpCompetency(_.books == Some(_), "Lire des livres")
+
+    // Hypothesis 3 (part 2)
     val likeGermanYes = Answer.filteredAnswers(answers, "Aimez-vous l'allemand", "Oui")
     val likeGermanNo = Answer.filteredAnswers(answers, "Aimez-vous l'allemand", "Non")
     def dumpHypothesis3(answers: Seq[Answer]) {
@@ -82,9 +108,6 @@ object German {
           Set("Participation en classe", "Faire travaux demandés", "Combien de temps pour apprentissage")),
         withGermanIs = false))
     }
-    println("Hypothèse 3")
-    println("-----------")
-    println()
     println("Aime l'allemand = oui:")
     dumpHypothesis3(likeGermanYes)
     println()
