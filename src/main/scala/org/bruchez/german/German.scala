@@ -74,16 +74,30 @@ object German {
 
     // Hypothesis 3 (part 1)
     def dumpCompetency(f: (Answer, Int) => Boolean, competency: String) {
+      def dump(answers: Seq[Answer]) {
+        Answer.dumpTotals(Answer.totals(
+          Answer.filteredAnswers(
+            answers,
+            Set("Participation en classe", "Faire travaux demandés", "Combien de temps pour apprentissage")),
+          withGermanIs = false,
+          withCompetencies = false))
+      }
+
+      val filteredAnswers13 = answers.filter(answer => f(answer, 1) || f(answer, 2) || f(answer, 3))
+      println(competency+" = 1-3:")
+      dump(filteredAnswers13)
+      println()
+
+      val filteredAnswers46 = answers.filter(answer => f(answer, 4) || f(answer, 5) || f(answer, 6))
+      println(competency+" = 4-6:")
+      dump(filteredAnswers46)
+      println()
+
       for (score <- 1 to 6) {
         val filteredAnswers = answers.filter(answer => f(answer, score))
         if (filteredAnswers.nonEmpty) {
           println(competency+" = "+score+":")
-          Answer.dumpTotals(Answer.totals(
-            Answer.filteredAnswers(
-              filteredAnswers,
-              Set("Participation en classe", "Faire travaux demandés", "Combien de temps pour apprentissage")),
-            withGermanIs = false,
-            withCompetencies = false))
+          dump(filteredAnswers)
           println()
         }
       }
