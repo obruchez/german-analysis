@@ -341,20 +341,22 @@ object Answer {
   def cellsEmpty(line: Seq[String]): Boolean = line.map(_.isEmpty).fold(true)(_ && _)
   def isHeaderLine(line: Seq[String]): Boolean = line(0).map(_.isDigit).fold(true)(_ && _) && cellsEmpty(line.tail)
 
-  def resultsAsString(results: Map[String, Int]): String = {
-    val total = results.map(_._2).fold(0)(_ + _)
+  def resultsAsString(results: Map[String, Int], answerCount: Int): String = {
+    //val total = results.map(_._2).fold(0)(_ + _)
     val sortedSubTotals = results.toSeq.sortBy(_._2).reverse
 
     Some(sortedSubTotals map { kv =>
-      kv._1+" (%d, %.2f%%)".format(kv._2, 100.0 * kv._2.toDouble / total)
+      kv._1+" (%d, %.2f%%)".format(kv._2, 100.0 * kv._2.toDouble / answerCount)
     }).filter(_.nonEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("_")
   }
+
+  case class Totals(totalsByKey: Map[String, Map[String, Int]], answerCount: Int)
 
   def totals(
       answers: Seq[Answer],
       withKeyValues: Boolean = true,
       withGermanIs: Boolean = true,
-      withCompetencies: Boolean = true): Map[String, Map[String, Int]] = {
+      withCompetencies: Boolean = true): Totals = {
     val mutableTotals = collection.mutable.Map[String, collection.mutable.Map[String, Int]]()
 
     for (answer <- answers) {
@@ -384,13 +386,12 @@ object Answer {
       }
     }
 
-    mutableTotals.toMap.map(kv => kv._1 -> kv._2.toMap)
+    Totals(mutableTotals.toMap.map(kv => kv._1 -> kv._2.toMap), answers.size)
   }
 
-  def dumpTotals(totals: Map[String, Map[String, Int]])(implicit keys: Seq[Key]) {
-    for (key <- keys; subTotals <- totals.get(key.name)) {
+  def dumpTotals(totals: Totals)(implicit keys: Seq[Key]) {
+    for (key <- keys; subTotals <- totals.totalsByKey.get(key.name)) {
       val valueCount = subTotals.map(_._2).fold(0)(_ + _)
-
       val numericSubTotals = subTotals.filterNot(_._1 == "Pas de réponse")
       val numericValueCount = numericSubTotals.map(_._2).fold(0)(_ + _)
       val scoreAverage =
@@ -399,7 +400,9 @@ object Answer {
         else
           ""
 
-      println(" - "+key.number+" "+key.name+" ("+valueCount+"): "+Answer.resultsAsString(subTotals)+scoreAverage)
+      println(
+        " - "+key.number+" "+key.name+" ("+valueCount+"): "+
+        Answer.resultsAsString(subTotals, totals.answerCount)+scoreAverage)
     }
   }
 
