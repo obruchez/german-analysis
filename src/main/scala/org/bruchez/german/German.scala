@@ -225,8 +225,15 @@ object German {
 case class Key(number: String, name: String)
 
 object Key {
-  def keys(lines: List[List[String]]): Seq[Key] =
-    for (line <- lines.take(123).filter(_(1).nonEmpty)) yield Key(" "*(4-line(0).length)+line(0), line(1))
+  def keys(lines: List[List[String]]): Seq[Key] = {
+    val firstAnswer = lines.take(123)
+    val linesWithPrevious = firstAnswer.zip(List("", "") :: firstAnswer.init)
+    for ((line, previousLine) <- linesWithPrevious.filter(_._1(1).nonEmpty)) yield {
+      val number = Some(line(0)).filter(_.nonEmpty).getOrElse(previousLine(0))
+      val filteredNumber = if (line(1) == "Comprendre discours") "" else number
+      Key(" "*(4-filteredNumber.length)+filteredNumber, line(1))
+    }
+  }
 }
 
 case class Answer(
