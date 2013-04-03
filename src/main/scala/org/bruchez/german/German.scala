@@ -221,11 +221,17 @@ object Key {
   def keys(lines: List[List[String]]): Seq[Key] = {
     val firstAnswer = lines.take(123)
     val linesWithPrevious = firstAnswer.zip(List("", "") :: firstAnswer.init)
-    for ((line, previousLine) <- linesWithPrevious.filter(_._1(1).nonEmpty)) yield {
+    (for ((line, previousLine) <- linesWithPrevious.filter(_._1(1).nonEmpty)) yield {
       val number = Some(line(0)).filter(_.nonEmpty).getOrElse(previousLine(0))
       val filteredNumber = if (line(1) == "Comprendre discours") "" else number
       Key(" "*(4-filteredNumber.length)+filteredNumber, line(1))
-    }
+    }) map { key =>
+      if (key.name == Answer.germanIsKey) {
+        Seq(key, Key(" "*4, Answer.extendedGermanIsKey))
+      } else {
+        Seq(key)
+      }
+    } flatten
   }
 }
 
@@ -300,7 +306,13 @@ object Answer {
             (value, count.toInt)
           }
 
-          (answer.copy(keyValues = answer.keyValues + (key -> values)), 3)
+          val keyValues =
+            if (key == germanIsKey)
+              answer.keyValues + (key -> values) + extendedGermanIsValues(values)
+            else
+              answer.keyValues + (key -> values)
+
+          (answer.copy(keyValues = keyValues), 3)
         }
 
       if (remainingLines.size <= linesToDrop)
@@ -325,6 +337,10 @@ object Answer {
           parsedAnswers :+ Answer(remainingLines.take(nextAnswer)))
       }
     }
+  }
+
+  def extendedGermanIsValues(values: Seq[(String, Int)]): (String, Seq[(String, Int)]) = {
+    extendedGermanIsKey -> values.map(kv => kv._1+"-"+kv._2 -> 1)
   }
 
   def cellsEmpty(line: Seq[String]): Boolean = line.map(_.isEmpty).fold(true)(_ && _)
@@ -409,16 +425,17 @@ object Answer {
   def filteredAnswers(answers: Seq[Answer], keys: Set[String]): Seq[Answer] =
     answers.map(answer => answer.copy(keyValues = answer.keyValues.filter(kv => keys.contains(kv._1))))
 
-  private val competenciesKey = "Compétences"
-  private val oralComprehensionKey = "Comprendre discours"
-  private val writtenComprehensionKey = "Comprendre un texte"
-  private val oralExpressionKey = "Parler"
-  private val writtenExpressionKey = "Ecrire"
-  private val grammarKey = "Faire de la grammaire"
-  private val booksKey = "Lire des livres"
-  private val germanIsKey = "Allemand c'est"
-  private val noAnswerValue = "Pas de réponse"
+  val competenciesKey = "Compétences"
+  val oralComprehensionKey = "Comprendre discours"
+  val writtenComprehensionKey = "Comprendre un texte"
+  val oralExpressionKey = "Parler"
+  val writtenExpressionKey = "Ecrire"
+  val grammarKey = "Faire de la grammaire"
+  val booksKey = "Lire des livres"
+  val germanIsKey = "Allemand c'est"
+  val extendedGermanIsKey = "Allemand c'est (par score)"
+  val noAnswerValue = "Pas de réponse"
 
-  private val scoreKeys =
+  val scoreKeys =
     Set(oralComprehensionKey, writtenComprehensionKey, oralExpressionKey, writtenExpressionKey, grammarKey, booksKey)
 }
