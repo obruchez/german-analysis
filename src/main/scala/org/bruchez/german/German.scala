@@ -330,12 +330,13 @@ object Answer {
   def cellsEmpty(line: Seq[String]): Boolean = line.map(_.isEmpty).fold(true)(_ && _)
   def isHeaderLine(line: Seq[String]): Boolean = line(0).map(_.isDigit).fold(true)(_ && _) && cellsEmpty(line.tail)
 
-  def resultsAsString(results: Map[String, Int], answerCount: Int): String = {
-    //val total = results.map(_._2).fold(0)(_ + _)
-    val sortedSubTotals = results.toSeq.sortBy(_._2).reverse
+  def valuesAndCountsAsString(valuesAndCounts: Map[String, (Int, Int)], answerCount: Int): String = {
+    val sortedValuesAndCounts = valuesAndCounts.toSeq.sortBy(_._2._1).reverse
 
-    Some(sortedSubTotals map { kv =>
-      kv._1+" (%d, %.2f%%)".format(kv._2, 100.0 * kv._2.toDouble / answerCount)
+    Some(sortedValuesAndCounts map { kv =>
+      val percentage = 100.0 * kv._2._2.toDouble / answerCount
+      assert(percentage <= 100.0)
+      kv._1+" (%d, %.2f%%)".format(kv._2._1, percentage)
     }).filter(_.nonEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("-")
   }
 
@@ -397,9 +398,7 @@ object Answer {
       val valueCount = totalsByValue.map(_._2._1).fold(0)(_ + _)
       println(
         " - "+key.number+" "+key.name+" ("+valueCount+"): "+
-        Answer.resultsAsString(
-          totalsByValue.map(kv => kv._1 -> kv._2._1), // @todo FIX ME
-          totals.answerCount)+
+        Answer.valuesAndCountsAsString(totalsByValue, totals.answerCount)+
         scoreAverage(key, totalsByValue))
     }
   }
