@@ -59,7 +59,6 @@ object German {
     def dumpHypothesis2(answers: Seq[Answer]) {
       Answer.dumpTotals(Answer.totals(
         Answer.filteredAnswers(answers, Set("Pourquoi")),
-        withGermanIs = false,
         withCompetencies = false))
     }
     println("Hypothèse 2")
@@ -79,7 +78,6 @@ object German {
           Answer.filteredAnswers(
             answers,
             Set("Participation en classe", "Faire travaux demandés", "Combien de temps pour apprentissage")),
-          withGermanIs = false,
           withCompetencies = false))
       }
 
@@ -119,8 +117,7 @@ object German {
       Answer.dumpTotals(Answer.totals(
         Answer.filteredAnswers(
           answers,
-          Set("Participation en classe", "Faire travaux demandés", "Combien de temps pour apprentissage")),
-        withGermanIs = false))
+          Set("Participation en classe", "Faire travaux demandés", "Combien de temps pour apprentissage"))))
     }
     println("Aime l'allemand = oui:")
     dumpHypothesis3(likeGermanYes)
@@ -134,7 +131,7 @@ object German {
       (for {
         answer <- answers
         images <- answer.keyValues.get("3 images").toSeq
-        image <- images
+        image <- images.map(_._1)
       } yield image).distinct.sorted
     println("Hypothèse 8")
     println("-----------")
@@ -146,7 +143,6 @@ object German {
         Answer.filteredAnswers(
           answersForImage,
           Set("Aimez-vous l'allemand")),
-        withGermanIs = false,
         withCompetencies = false))
     }
     println()
@@ -156,7 +152,7 @@ object German {
       def withDuratuonClasses(answers: Seq[Answer]): Seq[Answer] =
         for {
           answer <- answers
-          durations = answer.keyValues("Combien de temps")
+          durations = answer.keyValues("Combien de temps").map(_._1)
           duration <- durations
         } yield {
           assert(durations.size == 1)
@@ -166,14 +162,13 @@ object German {
             if (less) "Moins de 3 semaines"
             else if (more) "Plus de 3 semaines"
             else "Autre"
-          answer.copy(keyValues = answer.keyValues + ("Combien de temps (classes)" -> Seq(durationClass)))
+          answer.copy(keyValues = answer.keyValues + ("Combien de temps (classes)" -> Seq((durationClass, 1))))
         }
 
       Answer.dumpTotals(Answer.totals(
         withDuratuonClasses(Answer.filteredAnswers(
           answers,
           Set("en dehors parle allemand/Ch-all", "Séjours", "Combien de temps"))),
-        withGermanIs = false,
         withCompetencies = false))
     }
     println("Hypothèse 9")
@@ -190,7 +185,6 @@ object German {
     def dumpHypothesis10(answers: Seq[Answer]) {
       Answer.dumpTotals(Answer.totals(
         Answer.filteredAnswers(answers, Set("Télévision en allemand", "Chansons en allemand")),
-        withGermanIs = false,
         withCompetencies = false))
     }
     println("Hypothèse 10")
@@ -207,7 +201,6 @@ object German {
     def dumpHypothesis11(answers: Seq[Answer]) {
       Answer.dumpTotals(Answer.totals(
         Answer.filteredAnswers(answers, Set("Utilisation études/vie professionnelle")),
-        withGermanIs = false,
         withCompetencies = false))
     }
     println("Hypothèse 11")
@@ -238,8 +231,7 @@ object Key {
 
 case class Answer(
     number: Int,
-    keyValues: Map[String, Seq[String]] = Map(),
-    germanIs: Map[String, Int] = Map(),
+    keyValues: Map[String, Seq[(String, Int)]] = Map(),
     oralComprehension: Option[Int] = None,
     writtenComprehension: Option[Int] = None,
     oralExpression: Option[Int] = None,
@@ -254,10 +246,10 @@ case class Answer(
     println("Expression écrite: "+writtenExpression.getOrElse("-"))
     println("Grammaire: "+grammar.getOrElse("-"))
     println("Livres: "+books.getOrElse("-"))
-    println("L'allemand, c'est: "+Some(germanIs).filter(_.nonEmpty).map(_.map(kv => kv._1+" ("+kv._2+")").reduceLeft(_+", "+_)).getOrElse("-"))
     println("Valeurs:")
     for ((key, values) <- keyValues) {
-      println(" - "+key+": "+Some(values).filterNot(_.isEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("-"))
+      val valueCountStrings = values map { case (value, count) => value+" ("+count+")" }
+      println(" - "+key+": "+Some(valueCountStrings).filterNot(_.isEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("-"))
     }
   }
 }
@@ -299,23 +291,13 @@ object Answer {
           (answer.copy(grammar = score), 1)
         } else if (key == booksKey) {
           (answer.copy(books = score), 2)
-        } else if (key == germanIsKey) {
-          val germanIs = remainingLines(0).drop(2).zipWithIndex map { case (value, index) =>
-            (value, remainingLines(1)(2 + index))
-          } filter { case (value, count) =>
-            value.nonEmpty && count.nonEmpty
-          } map { case (value, count) =>
-            (value, count.toInt)
-          }
-
-          (answer.copy(germanIs = Map(germanIs: _*)), 3)
         } else {
           val values = remainingLines(0).drop(2).zipWithIndex map { case (value, index) =>
             (value, remainingLines(1)(2 + index))
           } filter { case (value, count) =>
             value.nonEmpty && count.nonEmpty
-          } flatMap { case (value, count) =>
-            List.fill(count.toInt)(value)
+          } map { case (value, count) =>
+            (value, count.toInt)
           }
 
           (answer.copy(keyValues = answer.keyValues + (key -> values)), 3)
@@ -354,33 +336,31 @@ object Answer {
 
     Some(sortedSubTotals map { kv =>
       kv._1+" (%d, %.2f%%)".format(kv._2, 100.0 * kv._2.toDouble / answerCount)
-    }).filter(_.nonEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("_")
+    }).filter(_.nonEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("-")
   }
 
-  case class Totals(totalsByKey: Map[String, Map[String, Int]], answerCount: Int)
+  case class Totals(
+    // First int value is total counting duplicate values, second int value is total counting duplicate values as 1
+    totalsByKeyAndValue: Map[String, Map[String, (Int, Int)]],
+    answerCount: Int)
 
   def totals(
       answers: Seq[Answer],
       withKeyValues: Boolean = true,
-      withGermanIs: Boolean = true,
       withCompetencies: Boolean = true): Totals = {
-    val mutableTotals = collection.mutable.Map[String, collection.mutable.Map[String, Int]]()
+    val mutableTotals = collection.mutable.Map[String, collection.mutable.Map[String, (Int, Int)]]()
 
     for (answer <- answers) {
       def addKeyAndValue(key: String, value: String, count: Int = 1) {
-        val keyMap = mutableTotals.getOrElse(key, collection.mutable.Map[String, Int]())
+        val keyMap = mutableTotals.getOrElse(key, collection.mutable.Map[String, (Int, Int)]())
         mutableTotals.put(key, keyMap)
 
-        val valueCount = keyMap.getOrElse(value, 0)
-        keyMap.put(value, valueCount + count)
+        val valueCount = keyMap.getOrElse(value, (0, 0))
+        keyMap.put(value, (valueCount._1 + count, valueCount._2 + 1))
       }
 
       if (withKeyValues) {
-        for ((key, values) <- answer.keyValues; value <- values) addKeyAndValue(key, value)
-      }
-
-      if (withGermanIs) {
-        for ((value, count) <- answer.germanIs) addKeyAndValue(germanIsKey, value, count)
+        for ((key, values) <- answer.keyValues; value <- values) addKeyAndValue(key, value._1, value._2)
       }
 
       if (withCompetencies) {
@@ -397,24 +377,35 @@ object Answer {
   }
 
   def dumpTotals(totals: Totals)(implicit keys: Seq[Key]) {
-    for (key <- keys; subTotals <- totals.totalsByKey.get(key.name)) {
-      val valueCount = subTotals.map(_._2).fold(0)(_ + _)
-      val numericSubTotals = subTotals.filterNot(_._1 == "Pas de réponse")
-      val numericValueCount = numericSubTotals.map(_._2).fold(0)(_ + _)
-      val scoreAverage =
-        if (scoreKeys.contains(key.name))
-          " (moyenne: %.2f)".format(numericSubTotals.map(kv => kv._1.toInt * kv._2).sum.toDouble / numericValueCount)
-        else
-          ""
+    def scoreAverage(key: Key, totalsByValue: Map[String, (Int, Int)]): String =
+      if (scoreKeys.contains(key.name)) {
+        val countsByScore = totalsByValue.filterNot(_._1 == "Pas de réponse") map { kv =>
+          val countWithDuplicates = kv._2._1
+          val countWithoutDuplicates = kv._2._2
+          assert(countWithDuplicates == countWithoutDuplicates)
+          kv._1.toInt -> countWithDuplicates
+        }
+        val totalScore = countsByScore.map(kv => kv._1 * kv._2).sum
+        val totalScoreCount = countsByScore.map(_._2).sum
+        val average = totalScore.toDouble / totalScoreCount
+        " (moyenne: %.2f)".format(average)
+    } else {
+      ""
+    }
 
+    for (key <- keys; totalsByValue <- totals.totalsByKeyAndValue.get(key.name)) {
+      val valueCount = totalsByValue.map(_._2._1).fold(0)(_ + _)
       println(
         " - "+key.number+" "+key.name+" ("+valueCount+"): "+
-        Answer.resultsAsString(subTotals, totals.answerCount)+scoreAverage)
+        Answer.resultsAsString(
+          totalsByValue.map(kv => kv._1 -> kv._2._1), // @todo FIX ME
+          totals.answerCount)+
+        scoreAverage(key, totalsByValue))
     }
   }
 
   def filteredAnswers(answers: Seq[Answer], key: String, value: String): Seq[Answer] =
-    answers.filter(_.keyValues(key).toSet.contains(value))
+    answers.filter(_.keyValues(key).map(_._1).toSet.contains(value))
 
   def filteredAnswers(answers: Seq[Answer], keys: Set[String]): Seq[Answer] =
     answers.map(answer => answer.copy(keyValues = answer.keyValues.filter(kv => keys.contains(kv._1))))
