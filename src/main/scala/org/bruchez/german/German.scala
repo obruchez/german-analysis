@@ -37,7 +37,7 @@ object German {
         }
       }
 
-    implicit val keys = Key.keys(trimmedLines) :+ Key("    ", "Combien de temps (classes)")
+    implicit val keys = Key.keys(trimmedLines)
     //keys.foreach(key => println(key.number+" "+key.name))
 
     val answers = Answer.answersFromLines(trimmedLines)
@@ -149,26 +149,10 @@ object German {
 
     // Hypothesis 9
     def dumpHypothesis9(answers: Seq[Answer]) {
-      def withDuratuonClasses(answers: Seq[Answer]): Seq[Answer] =
-        for {
-          answer <- answers
-          durations = answer.keyValues("Combien de temps").map(_._1)
-          duration <- durations
-        } yield {
-          assert(durations.size == 1)
-          val less = Set("1 semaine", "2 semaines").contains(duration)
-          val more = Set("3 semaines", "1 mois", "2 mois", "3 mois", "4-6 mois", "plus de 6 mois").contains(duration)
-          val durationClass =
-            if (less) "Moins de 3 semaines"
-            else if (more) "Plus de 3 semaines"
-            else "Autre"
-          answer.copy(keyValues = answer.keyValues + ("Combien de temps (classes)" -> Seq((durationClass, 1))))
-        }
-
       Answer.dumpTotals(Answer.totals(
-        withDuratuonClasses(Answer.filteredAnswers(
+        Answer.filteredAnswers(
           answers,
-          Set("en dehors parle allemand/Ch-all", "Séjours", "Combien de temps"))),
+          Set("en dehors parle allemand/Ch-all", "Séjours", "Combien de temps", "Combien de temps (classes)")),
         withCompetencies = false))
     }
     println("Hypothèse 9")
@@ -221,17 +205,19 @@ object Key {
   def keys(lines: List[List[String]]): Seq[Key] = {
     val firstAnswer = lines.take(123)
     val linesWithPrevious = firstAnswer.zip(List("", "") :: firstAnswer.init)
-    (for ((line, previousLine) <- linesWithPrevious.filter(_._1(1).nonEmpty)) yield {
+    ((for ((line, previousLine) <- linesWithPrevious.filter(_._1(1).nonEmpty)) yield {
       val number = Some(line(0)).filter(_.nonEmpty).getOrElse(previousLine(0))
       val filteredNumber = if (line(1) == "Comprendre discours") "" else number
       Key(" "*(4-filteredNumber.length)+filteredNumber, line(1))
     }) map { key =>
       if (key.name == Answer.germanIsKey) {
-        Seq(key, Key(" "*4, Answer.extendedGermanIsKey))
+        Seq(key) ++ Answer.germanIsValues.map(value => Key(" "*4, Answer.extendedGermanIsKey.format(value)))
+      } else if (key.name == Answer.howMuchTime) {
+        Seq(key, Key(" "*4, Answer.simplifiedHowMuchTime))
       } else {
         Seq(key)
       }
-    } flatten
+    }).flatten
   }
 }
 
@@ -306,11 +292,14 @@ object Answer {
             (value, count.toInt)
           }
 
+          val baseKeyValues = answer.keyValues + (key -> values)
           val keyValues =
             if (key == germanIsKey)
-              answer.keyValues + (key -> values) + extendedGermanIsValues(values)
+              baseKeyValues ++ extendedGermanIsValues(values)
+            else if (key == howMuchTime)
+              baseKeyValues ++ simplifiedHowMuchTimeValues(values)
             else
-              answer.keyValues + (key -> values)
+              baseKeyValues
 
           (answer.copy(keyValues = keyValues), 3)
         }
@@ -339,14 +328,33 @@ object Answer {
     }
   }
 
-  def extendedGermanIsValues(values: Seq[(String, Int)]): (String, Seq[(String, Int)]) = {
-    extendedGermanIsKey -> values.map(kv => kv._1+"-"+kv._2 -> 1)
+  def extendedGermanIsValues(values: Seq[(String, Int)]): Seq[(String, Seq[(String, Int)])] =
+    values map { case (value, count) =>
+      // One key per original value
+      extendedGermanIsKey.format(value) -> Seq((count.toString, 1))
+    }
+
+  def simplifiedHowMuchTimeValues(values: Seq[(String, Int)]): Seq[(String, Seq[(String, Int)])] = {
+   val durationClasses =
+    for (value <- values) yield {
+      assert(values.size == 1)
+      val duration = value._1
+      val less = Set("1 semaine", "2 semaines").contains(duration)
+      val more = Set("3 semaines", "1 mois", "2 mois", "3 mois", "4-6 mois", "plus de 6 mois").contains(duration)
+      val durationClass =
+        if (less) "Moins de 3 semaines"
+        else if (more) "Plus de 3 semaines"
+        else "Autre"
+      (durationClass, 1)
+    }
+
+    Seq(simplifiedHowMuchTime -> durationClasses)
   }
 
   def cellsEmpty(line: Seq[String]): Boolean = line.map(_.isEmpty).fold(true)(_ && _)
   def isHeaderLine(line: Seq[String]): Boolean = line(0).map(_.isDigit).fold(true)(_ && _) && cellsEmpty(line.tail)
 
-  def valuesAndCountsAsString(valuesAndCounts: Map[String, (Int, Int)], answerCount: Int): String = {
+  def valuesAndCountsAsString(key: Key, valuesAndCounts: Map[String, (Int, Int)], answerCount: Int): String = {
     val sortedValuesAndCounts = valuesAndCounts.toSeq.sortBy(_._2._1).reverse
 
     Some(sortedValuesAndCounts map { kv =>
@@ -414,7 +422,7 @@ object Answer {
       val valueCount = totalsByValue.map(_._2._1).fold(0)(_ + _)
       println(
         " - "+key.number+" "+key.name+" ("+valueCount+"): "+
-        Answer.valuesAndCountsAsString(totalsByValue, totals.answerCount)+
+        Answer.valuesAndCountsAsString(key, totalsByValue, totals.answerCount)+
         scoreAverage(key, totalsByValue))
     }
   }
@@ -433,9 +441,30 @@ object Answer {
   val grammarKey = "Faire de la grammaire"
   val booksKey = "Lire des livres"
   val germanIsKey = "Allemand c'est"
-  val extendedGermanIsKey = "Allemand c'est (par score)"
+  val extendedGermanIsKey = "Allemand c'est (%s)"
+  val howMuchTime = "Combien de temps"
+  val simplifiedHowMuchTime = "Combien de temps (classes)"
   val noAnswerValue = "Pas de réponse"
 
-  val scoreKeys =
-    Set(oralComprehensionKey, writtenComprehensionKey, oralExpressionKey, writtenExpressionKey, grammarKey, booksKey)
+  val scoreKeys = Set(
+    oralComprehensionKey,
+    writtenComprehensionKey,
+    oralExpressionKey,
+    writtenExpressionKey,
+    grammarKey,
+    booksKey)
+
+  val germanIsValues = Seq(
+    "intéressant",
+    "ennuyeux",
+    "facile",
+    "difficile",
+    "utile",
+    "inutile",
+    "choix",
+    "obligation",
+    "nouvelle culture",
+    "parler aux autres",
+    "L comme les autres",
+    "pouvoir travailler à l'étranger")
 }
