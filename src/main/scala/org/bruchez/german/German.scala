@@ -295,17 +295,22 @@ object Answer {
         } else if (key == booksKey) {
           (answer.copy(books = score), 2)
         } else {
-          def countFromString(string: String): Option[Int] = {
+          def countFromString(value: String, count: String): Option[Int] = {
             // For "Allemand c'est" default count to 1 if not present
-            if (key == germanIsKey && string.isEmpty) Some(1) else Some(string).filterNot(_.isEmpty).map(_.toInt)
+            if (key == germanIsKey && value == Answer.noAnswerValue)
+              None
+            else if (key == germanIsKey && count.isEmpty)
+              Some(1)
+            else
+              Some(count).filterNot(_.isEmpty).map(_.toInt)
           }
 
           val values = remainingLines(0).drop(2).zipWithIndex map { case (value, index) =>
             (value, remainingLines(1)(2 + index))
           } filter { case (value, count) =>
-            value.nonEmpty && countFromString(count).nonEmpty
+            value.nonEmpty && countFromString(value, count).nonEmpty
           } map { case (value, count) =>
-            (value, countFromString(count).get)
+            (value, countFromString(value, count).get)
           }
 
           val baseKeyValues = answer.keyValues + (key -> values)
@@ -371,12 +376,18 @@ object Answer {
   def isHeaderLine(line: Seq[String]): Boolean = line(0).map(_.isDigit).fold(true)(_ && _) && cellsEmpty(line.tail)
 
   def valuesAndCountsAsString(key: Key, valuesAndCounts: Map[String, (Int, Int)], answerCount: Int): String = {
-    val sortedValuesAndCounts = valuesAndCounts.toSeq.sortBy(_._2._1).reverse
+    val sortedValuesAndCounts = valuesAndCounts.toSeq.sortBy(_._1).reverse.sortBy(_._2._1).reverse
 
     Some(sortedValuesAndCounts map { kv =>
-      val percentage = 100.0 * kv._2._2.toDouble / answerCount
-      assert(percentage <= 100.0)
-      kv._1+" (%d, %.2f%%)".format(kv._2._1, percentage)
+      val percentageString =
+        if (key.name == Answer.germanIsKey) {
+          ""
+        } else {
+          val percentage = 100.0 * kv._2._2.toDouble / answerCount
+          assert(percentage <= 100.0)
+          ", %.2f%%".format(percentage)
+        }
+      kv._1+" (%d%s)".format(kv._2._1, percentageString)
     }).filter(_.nonEmpty).map(_.reduceLeft(_+", "+_)).getOrElse("-")
   }
 
@@ -435,9 +446,16 @@ object Answer {
     }
 
     for (key <- keys; totalsByValue <- totals.totalsByKeyAndValue.get(key.name)) {
-      val valueCount = totalsByValue.map(_._2._1).fold(0)(_ + _)
+      val valueCountString =
+        if (key.name == Answer.germanIsKey) {
+          ""
+        } else {
+          val valueCount = totalsByValue.map(_._2._1).fold(0)(_ + _)
+          " ("+valueCount+")"
+        }
+
       out.println(
-        " - "+key.number+" "+key.name+" ("+valueCount+"): "+
+        " - "+key.number+" "+key.name+valueCountString+": "+
         Answer.valuesAndCountsAsString(key, totalsByValue, totals.answerCount)+
         scoreAverage(key, totalsByValue))
     }
