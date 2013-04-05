@@ -13,7 +13,7 @@ object German {
     val inFiles = args.init
     val outFile = args.last
 
-    val out = new PrintWriter(new File(outFile))
+    val out = new PrintWriter(new File(outFile), "UTF-8")
 
     try {
       inFiles.foreach(dumpFileResults(out, _))
