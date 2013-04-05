@@ -295,12 +295,17 @@ object Answer {
         } else if (key == booksKey) {
           (answer.copy(books = score), 2)
         } else {
+          def countFromString(string: String): Option[Int] = {
+            // For "Allemand c'est" default count to 1 if not present
+            if (key == germanIsKey && string.isEmpty) Some(1) else Some(string).filterNot(_.isEmpty).map(_.toInt)
+          }
+
           val values = remainingLines(0).drop(2).zipWithIndex map { case (value, index) =>
             (value, remainingLines(1)(2 + index))
           } filter { case (value, count) =>
-            value.nonEmpty && count.nonEmpty
+            value.nonEmpty && countFromString(count).nonEmpty
           } map { case (value, count) =>
-            (value, count.toInt)
+            (value, countFromString(count).get)
           }
 
           val baseKeyValues = answer.keyValues + (key -> values)
