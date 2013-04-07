@@ -17,19 +17,24 @@ object German {
 
     try {
       inFiles.foreach(dumpFileResults(out, _))
-      dumpAllFileResults(out, inFiles)
+      if (inFiles.size > 1) dumpAllFileResults(out, inFiles)
     } finally {
       out.close()
     }
   }
 
+  def fileToClass(file: String): String = {
+    val fileParts = file.split('.')
+    if (fileParts.size <= 1) file else fileParts.init.mkString(".")
+  }
+
   def dumpFileResults(out: PrintWriter, file: String) {
-    dumpResults(out, file, CSV.parse(scala.io.Source.fromFile(file).mkString+"\n"))
+    dumpResults(out, fileToClass(file), CSV.parse(scala.io.Source.fromFile(file).mkString+"\n"))
   }
 
   def dumpAllFileResults(out: PrintWriter, files: Seq[String]) {
     val lines = files.map(file => CSV.parse(scala.io.Source.fromFile(file).mkString+"\n")).reduce(_ ++ _)
-    dumpResults(out, "Toutes les classes", lines)
+    dumpResults(out, "Toutes les classes ("+files.map(fileToClass).reduceLeft(_+" / "+_)+")", lines)
   }
 
   def dumpResults(out: PrintWriter, header: String, lines: List[List[String]]) {
