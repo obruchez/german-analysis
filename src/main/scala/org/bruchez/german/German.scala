@@ -212,6 +212,24 @@ object German {
     out.println("Aime l'allemand = non:")
     dumpHypothesis11(likeGermanNo)
     out.println()
+
+    // Hypothesis 12
+    val findUsefulYes = Answer.filteredAnswers(answers, "Utile d'apprendre l'allemand", "Oui")
+    val findUsefulNo = Answer.filteredAnswers(answers, "Utile d'apprendre l'allemand", "Non")
+    def dumpHypothesis12(answers: Seq[Answer]) {
+      Answer.dumpTotals(out, Answer.totals(
+        Answer.filteredAnswers(answers, Set("Aimez-vous l'allemand")),
+        withCompetencies = false))
+    }
+    out.println("Hypothèse 12")
+    out.println("------------")
+    out.println()
+    out.println("Utile d'apprendre l'allemand = oui:")
+    dumpHypothesis12(findUsefulYes)
+    out.println()
+    out.println("Utile d'apprendre l'allemand = non:")
+    dumpHypothesis12(findUsefulNo)
+    out.println()
   }
 }
 
