@@ -1,22 +1,13 @@
 *.class
 *.log
-
-# sbt specific
-dist/*
-target/
-lib_managed/
-src_managed/
-project/boot/
-project/plugins/project/
-
-# Scala-IDE specific
+.bsp/
 .idea
 .idea_modules
 .scala_dependencies
+dist/*
+lib_managed/
+project/boot/
+project/plugins/project/
 src/main/Main.iml
-
-# Dev DBs
-lift_proto.db.h2.db
-lift_proto.db.lock.db
-lift_proto.db.trace.db
-src/main/Main.iml
+src_managed/
+target/

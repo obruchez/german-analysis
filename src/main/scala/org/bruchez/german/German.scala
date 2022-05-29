@@ -34,9 +34,11 @@ object German {
   def dumpAllFileResults(out: PrintWriter, files: Seq[String]) {
     val lines =
       files.map(file => CSV.parse(scala.io.Source.fromFile(file).mkString + "\n")).reduce(_ ++ _)
-    dumpResults(out,
-                "Toutes les classes (" + files.map(fileToClass).reduceLeft(_ + " / " + _) + ")",
-                lines)
+    dumpResults(
+      out,
+      "Toutes les classes (" + files.map(fileToClass).reduceLeft(_ + " / " + _) + ")",
+      lines
+    )
   }
 
   // scalastyle:off method.length
@@ -57,10 +59,10 @@ object German {
       }
 
     implicit val keys = Key.keys(trimmedLines)
-    //keys.foreach(key => out.println(key.number+" "+key.name))
+    // keys.foreach(key => out.println(key.number+" "+key.name))
 
     val answers = Answer.answersFromLines(trimmedLines)
-    //answers.foreach(answer => { answer.dump(); out.println("===") })
+    // answers.foreach(answer => { answer.dump(); out.println("===") })
 
     out.println("Réponses: " + answers.size)
     out.println()
@@ -78,7 +80,8 @@ object German {
     def dumpHypothesis2(answers: Seq[Answer]) {
       Answer.dumpTotals(
         out,
-        Answer.totals(Answer.filteredAnswers(answers, Set("Pourquoi")), withCompetencies = false))
+        Answer.totals(Answer.filteredAnswers(answers, Set("Pourquoi")), withCompetencies = false)
+      )
     }
     out.println("Hypothèse 2")
     out.println("-----------")
@@ -95,11 +98,17 @@ object German {
       def dump(answers: Seq[Answer]) {
         Answer.dumpTotals(
           out,
-          Answer.totals(Answer.filteredAnswers(answers,
-                                               Set("Participation en classe",
-                                                   "Faire travaux demandés",
-                                                   "Combien de temps pour apprentissage")),
-                        withCompetencies = false)
+          Answer.totals(
+            Answer.filteredAnswers(
+              answers,
+              Set(
+                "Participation en classe",
+                "Faire travaux demandés",
+                "Combien de temps pour apprentissage"
+              )
+            ),
+            withCompetencies = false
+          )
         )
       }
 
@@ -138,12 +147,19 @@ object German {
     val likeGermanYes = Answer.filteredAnswers(answers, "Aimez-vous l'allemand", "Oui")
     val likeGermanNo = Answer.filteredAnswers(answers, "Aimez-vous l'allemand", "Non")
     def dumpHypothesis3(answers: Seq[Answer]) {
-      Answer.dumpTotals(out,
-                        Answer.totals(
-                          Answer.filteredAnswers(answers,
-                                                 Set("Participation en classe",
-                                                     "Faire travaux demandés",
-                                                     "Combien de temps pour apprentissage"))))
+      Answer.dumpTotals(
+        out,
+        Answer.totals(
+          Answer.filteredAnswers(
+            answers,
+            Set(
+              "Participation en classe",
+              "Faire travaux demandés",
+              "Combien de temps pour apprentissage"
+            )
+          )
+        )
+      )
     }
     out.println("Aime l'allemand = oui:")
     dumpHypothesis3(likeGermanYes)
@@ -167,8 +183,11 @@ object German {
       out.println("Image = " + image + ":")
       Answer.dumpTotals(
         out,
-        Answer.totals(Answer.filteredAnswers(answersForImage, Set("Aimez-vous l'allemand")),
-                      withCompetencies = false))
+        Answer.totals(
+          Answer.filteredAnswers(answersForImage, Set("Aimez-vous l'allemand")),
+          withCompetencies = false
+        )
+      )
     }
     out.println()
 
@@ -177,11 +196,15 @@ object German {
       Answer.dumpTotals(
         out,
         Answer.totals(
-          Answer.filteredAnswers(answers,
-                                 Set("en dehors parle allemand/Ch-all",
-                                     "Séjours",
-                                     "Combien de temps",
-                                     "Combien de temps (classes)")),
+          Answer.filteredAnswers(
+            answers,
+            Set(
+              "en dehors parle allemand/Ch-all",
+              "Séjours",
+              "Combien de temps",
+              "Combien de temps (classes)"
+            )
+          ),
           withCompetencies = false
         )
       )
@@ -202,7 +225,9 @@ object German {
         out,
         Answer.totals(
           Answer.filteredAnswers(answers, Set("Télévision en allemand", "Chansons en allemand")),
-          withCompetencies = false))
+          withCompetencies = false
+        )
+      )
     }
     out.println("Hypothèse 10")
     out.println("------------")
@@ -220,7 +245,9 @@ object German {
         out,
         Answer.totals(
           Answer.filteredAnswers(answers, Set("Utilisation études/vie professionnelle")),
-          withCompetencies = false))
+          withCompetencies = false
+        )
+      )
     }
     out.println("Hypothèse 11")
     out.println("------------")
@@ -236,9 +263,13 @@ object German {
     val findUsefulYes = Answer.filteredAnswers(answers, "Utile d'apprendre l'allemand", "Oui")
     val findUsefulNo = Answer.filteredAnswers(answers, "Utile d'apprendre l'allemand", "Non")
     def dumpHypothesis12(answers: Seq[Answer]) {
-      Answer.dumpTotals(out,
-                        Answer.totals(Answer.filteredAnswers(answers, Set("Aimez-vous l'allemand")),
-                                      withCompetencies = false))
+      Answer.dumpTotals(
+        out,
+        Answer.totals(
+          Answer.filteredAnswers(answers, Set("Aimez-vous l'allemand")),
+          withCompetencies = false
+        )
+      )
     }
     out.println("Hypothèse 12")
     out.println("------------")
@@ -268,7 +299,8 @@ object Key {
     }) map { key =>
       if (key.name == Answer.germanIsKey) {
         Seq(key) ++ Answer.germanIsValues.map(value =>
-          Key(" " * 4, Answer.extendedGermanIsKey.format(value)))
+          Key(" " * 4, Answer.extendedGermanIsKey.format(value))
+        )
       } else if (key.name == Answer.howMuchTime) {
         Seq(key, Key(" " * 4, Answer.simplifiedHowMuchTime))
       } else {
@@ -278,14 +310,16 @@ object Key {
   }
 }
 
-case class Answer(number: Int,
-                  keyValues: Map[String, Seq[(String, Int)]] = Map(),
-                  oralComprehension: Option[Int] = None,
-                  writtenComprehension: Option[Int] = None,
-                  oralExpression: Option[Int] = None,
-                  writtenExpression: Option[Int] = None,
-                  grammar: Option[Int] = None,
-                  books: Option[Int] = None) {
+case class Answer(
+    number: Int,
+    keyValues: Map[String, Seq[(String, Int)]] = Map(),
+    oralComprehension: Option[Int] = None,
+    writtenComprehension: Option[Int] = None,
+    oralExpression: Option[Int] = None,
+    writtenExpression: Option[Int] = None,
+    grammar: Option[Int] = None,
+    books: Option[Int] = None
+) {
   def dump(out: PrintWriter) {
     out.println("Numéro: " + number)
     out.println("Compréhension orale: " + oralComprehension.getOrElse("-"))
@@ -301,13 +335,14 @@ case class Answer(number: Int,
         " - " + key + ": " + Some(valueCountStrings)
           .filterNot(_.isEmpty)
           .map(_.reduceLeft(_ + ", " + _))
-          .getOrElse("-"))
+          .getOrElse("-")
+      )
     }
   }
 }
 
 object Answer {
-  //val keys = collection.mutable.Map[String, collection.mutable.Set[Int]]()
+  // val keys = collection.mutable.Map[String, collection.mutable.Set[Int]]()
 
   // scalastyle:off method.length cyclomatic.complexity
   def apply(lines: Seq[Seq[String]]): Answer = {
@@ -357,15 +392,12 @@ object Answer {
             }
           }
 
-          val values = remainingLines(0).drop(2).zipWithIndex map {
-            case (value, index) =>
-              (value, remainingLines(1)(2 + index))
-          } filter {
-            case (value, count) =>
-              value.nonEmpty && countFromString(value, count).nonEmpty
-          } map {
-            case (value, count) =>
-              (value, countFromString(value, count).get)
+          val values = remainingLines(0).drop(2).zipWithIndex map { case (value, index) =>
+            (value, remainingLines(1)(2 + index))
+          } filter { case (value, count) =>
+            value.nonEmpty && countFromString(value, count).nonEmpty
+          } map { case (value, count) =>
+            (value, countFromString(value, count).get)
           }
 
           val baseKeyValues = answer.keyValues + (key -> values)
@@ -397,24 +429,27 @@ object Answer {
   // scalastyle:on method.length cyclomatic.complexity
 
   @scala.annotation.tailrec
-  def answersFromLines(remainingLines: Seq[Seq[String]],
-                       parsedAnswers: Seq[Answer] = Seq()): Seq[Answer] = {
+  def answersFromLines(
+      remainingLines: Seq[Seq[String]],
+      parsedAnswers: Seq[Answer] = Seq()
+  ): Seq[Answer] = {
     val nextAnswerOption = remainingLines.zipWithIndex.find(li => li._1(0) == "4.8").map(_._2 + 2)
 
     nextAnswerOption match {
       case None => parsedAnswers
       case Some(nextAnswer) => {
-        answersFromLines(remainingLines.drop(nextAnswer).dropWhile(_(0).isEmpty),
-                         parsedAnswers :+ Answer(remainingLines.take(nextAnswer)))
+        answersFromLines(
+          remainingLines.drop(nextAnswer).dropWhile(_(0).isEmpty),
+          parsedAnswers :+ Answer(remainingLines.take(nextAnswer))
+        )
       }
     }
   }
 
   def extendedGermanIsValues(values: Seq[(String, Int)]): Seq[(String, Seq[(String, Int)])] =
-    values map {
-      case (value, count) =>
-        // One key per original value
-        extendedGermanIsKey.format(value) -> Seq((count.toString, 1))
+    values map { case (value, count) =>
+      // One key per original value
+      extendedGermanIsKey.format(value) -> Seq((count.toString, 1))
     }
 
   def simplifiedHowMuchTimeValues(values: Seq[(String, Int)]): Seq[(String, Seq[(String, Int)])] = {
@@ -443,9 +478,11 @@ object Answer {
   def isHeaderLine(line: Seq[String]): Boolean =
     line(0).map(_.isDigit).fold(true)(_ && _) && cellsEmpty(line.tail)
 
-  def valuesAndCountsAsString(key: Key,
-                              valuesAndCounts: Map[String, (Int, Int)],
-                              answerCount: Int): String = {
+  def valuesAndCountsAsString(
+      key: Key,
+      valuesAndCounts: Map[String, (Int, Int)],
+      answerCount: Int
+  ): String = {
     val sortedValuesAndCounts = valuesAndCounts.toSeq.sortBy(_._1).reverse.sortBy(_._2._1).reverse
 
     Some(sortedValuesAndCounts map { kv =>
@@ -462,13 +499,16 @@ object Answer {
   }
 
   case class Totals(
-                    // First int value is total counting duplicate values, second int value is total counting duplicate values as 1
-                    totalsByKeyAndValue: Map[String, Map[String, (Int, Int)]],
-                    answerCount: Int)
+      // First int value is total counting duplicate values, second int value is total counting duplicate values as 1
+      totalsByKeyAndValue: Map[String, Map[String, (Int, Int)]],
+      answerCount: Int
+  )
 
-  def totals(answers: Seq[Answer],
-             withKeyValues: Boolean = true,
-             withCompetencies: Boolean = true): Totals = {
+  def totals(
+      answers: Seq[Answer],
+      withKeyValues: Boolean = true,
+      withCompetencies: Boolean = true
+  ): Totals = {
     val mutableTotals = collection.mutable.Map[String, collection.mutable.Map[String, (Int, Int)]]()
 
     for (answer <- answers) {
@@ -486,14 +526,22 @@ object Answer {
       }
 
       if (withCompetencies) {
-        addKeyAndValue(oralComprehensionKey,
-                       answer.oralComprehension.map(_.toString).getOrElse(noAnswerValue))
-        addKeyAndValue(writtenComprehensionKey,
-                       answer.writtenComprehension.map(_.toString).getOrElse(noAnswerValue))
-        addKeyAndValue(oralExpressionKey,
-                       answer.oralExpression.map(_.toString).getOrElse(noAnswerValue))
-        addKeyAndValue(writtenExpressionKey,
-                       answer.writtenExpression.map(_.toString).getOrElse(noAnswerValue))
+        addKeyAndValue(
+          oralComprehensionKey,
+          answer.oralComprehension.map(_.toString).getOrElse(noAnswerValue)
+        )
+        addKeyAndValue(
+          writtenComprehensionKey,
+          answer.writtenComprehension.map(_.toString).getOrElse(noAnswerValue)
+        )
+        addKeyAndValue(
+          oralExpressionKey,
+          answer.oralExpression.map(_.toString).getOrElse(noAnswerValue)
+        )
+        addKeyAndValue(
+          writtenExpressionKey,
+          answer.writtenExpression.map(_.toString).getOrElse(noAnswerValue)
+        )
         addKeyAndValue(grammarKey, answer.grammar.map(_.toString).getOrElse(noAnswerValue))
         addKeyAndValue(booksKey, answer.books.map(_.toString).getOrElse(noAnswerValue))
       }
@@ -531,7 +579,8 @@ object Answer {
       out.println(
         " - " + key.number + " " + key.name + valueCountString + ": " +
           Answer.valuesAndCountsAsString(key, totalsByValue, totals.answerCount) +
-          scoreAverage(key, totalsByValue))
+          scoreAverage(key, totalsByValue)
+      )
     }
   }
 
@@ -540,7 +589,8 @@ object Answer {
 
   def filteredAnswers(answers: Seq[Answer], keys: Set[String]): Seq[Answer] =
     answers.map(answer =>
-      answer.copy(keyValues = answer.keyValues.filter(kv => keys.contains(kv._1))))
+      answer.copy(keyValues = answer.keyValues.filter(kv => keys.contains(kv._1)))
+    )
 
   val competenciesKey = "Compétences"
   val oralComprehensionKey = "Comprendre discours"
@@ -555,12 +605,14 @@ object Answer {
   val simplifiedHowMuchTime = "Combien de temps (classes)"
   val noAnswerValue = "Pas de réponse"
 
-  val scoreKeys = Set(oralComprehensionKey,
-                      writtenComprehensionKey,
-                      oralExpressionKey,
-                      writtenExpressionKey,
-                      grammarKey,
-                      booksKey)
+  val scoreKeys = Set(
+    oralComprehensionKey,
+    writtenComprehensionKey,
+    oralExpressionKey,
+    writtenExpressionKey,
+    grammarKey,
+    booksKey
+  )
 
   val germanIsValues = Seq(
     "intéressant",
